@@ -109,6 +109,7 @@ class ReminderService {
 
   void startReminders() {
     _stopTimer();
+    debugPrint("start timer {$_frequency}");
     _reminderTimer = Timer.periodic(_frequency, (timer) {
       if (_isWithinActiveHours()) {
         _showNotification();
@@ -127,6 +128,7 @@ class ReminderService {
   }
 
   void _stopTimer() {
+    debugPrint('stop timer');
     _reminderTimer?.cancel();
     _reminderTimer = null;
   }

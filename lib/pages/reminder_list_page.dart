@@ -129,6 +129,10 @@ class _ReminderListPageState extends State<ReminderListPage> {
     if (updatedEvent != null) {
       await _storageService.updateEvent(updatedEvent);
       await _loadEvents();
+      debugPrint("重新启动定时器,{$updatedEvent}");
+      _reminderServices[updatedEvent.id]!.setFrequency(
+        Duration(minutes: updatedEvent.frequencyMinutes),
+      );
     }
   }
 
@@ -291,6 +295,7 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
 
   void _updateFrequency(int minutes) {
     setState(() {
+      debugPrint('updateFrequency after selector: $minutes minutes');
       _frequencyMinutes = minutes;
     });
   }
