@@ -26,7 +26,7 @@
 ## 编译
 编译到平台的App 
 ```
-# 参照文档编译：
+# 参照文档编译：https://docs.flutter.dev/deployment/macos
 platform可选值 [macos/windows/linux]
 flutter build {platform}
 ```
