@@ -8,6 +8,7 @@ class ReminderEvent {
   final TimeOfDay endTime;
   final int frequencyMinutes;
   final bool isActive;
+  final bool workdayOnly;
 
   ReminderEvent({
     required this.id,
@@ -15,7 +16,8 @@ class ReminderEvent {
     required this.startTime,
     required this.endTime,
     required this.frequencyMinutes,
-    this.isActive = false,
+    this.isActive = true,
+    this.workdayOnly = false,
   });
 
   // Convert TimeOfDay to a format that can be stored
@@ -40,6 +42,7 @@ class ReminderEvent {
       'endTime': _timeOfDayToJson(endTime),
       'frequencyMinutes': frequencyMinutes,
       'isActive': isActive,
+      'workdayOnly': workdayOnly,
     };
   }
 
@@ -52,6 +55,7 @@ class ReminderEvent {
       endTime: _timeOfDayFromJson(json['endTime']),
       frequencyMinutes: json['frequencyMinutes'],
       isActive: json['isActive'],
+      workdayOnly: json['workdayOnly'] ?? false,
     );
   }
 
@@ -63,6 +67,7 @@ class ReminderEvent {
     TimeOfDay? endTime,
     int? frequencyMinutes,
     bool? isActive,
+    bool? workdayOnly,
   }) {
     return ReminderEvent(
       id: id ?? this.id,
@@ -71,6 +76,7 @@ class ReminderEvent {
       endTime: endTime ?? this.endTime,
       frequencyMinutes: frequencyMinutes ?? this.frequencyMinutes,
       isActive: isActive ?? this.isActive,
+      workdayOnly: workdayOnly ?? this.workdayOnly,
     );
   }
 }

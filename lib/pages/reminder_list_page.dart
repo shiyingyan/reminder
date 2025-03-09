@@ -13,8 +13,16 @@ class ReminderListPage extends StatefulWidget {
 
 class _ReminderListPageState extends State<ReminderListPage> {
   final ReminderStorageService _storageService = ReminderStorageService();
-  final ReminderService _reminderService = ReminderService();
+  final Map<String, ReminderService> _reminderServices = {};
   List<ReminderEvent> _events = [];
+
+  @override
+  void dispose() {
+    for (final service in _reminderServices.values) {
+      service.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -34,15 +42,14 @@ class _ReminderListPageState extends State<ReminderListPage> {
     final events = await _storageService.loadEvents();
     for (final event in events) {
       if (event.isActive) {
-        _reminderService.setMessage(event.message);
-        _reminderService.setTimeRange(
-          event.startTime,
-          event.endTime,
-        );
-        _reminderService.setFrequency(
-          Duration(minutes: event.frequencyMinutes),
-        );
-        _reminderService.startReminders();
+        final service = ReminderService();
+        await service.initialize();
+        service.setMessage(event.message);
+        service.setTimeRange(event.startTime, event.endTime);
+        service.setFrequency(Duration(minutes: event.frequencyMinutes));
+        service.setWorkdayOnly(event.workdayOnly);
+        service.startReminders();
+        _reminderServices[event.id] = service;
       }
     }
   }
@@ -55,6 +62,14 @@ class _ReminderListPageState extends State<ReminderListPage> {
 
     if (event != null) {
       await _storageService.addEvent(event);
+      final service = ReminderService();
+      await service.initialize();
+      service.setMessage(event.message);
+      service.setTimeRange(event.startTime, event.endTime);
+      service.setFrequency(Duration(minutes: event.frequencyMinutes));
+      service.setWorkdayOnly(event.workdayOnly);
+      service.startReminders();
+      _reminderServices[event.id] = service;
       await _loadEvents();
     }
   }
@@ -64,17 +79,42 @@ class _ReminderListPageState extends State<ReminderListPage> {
     await _storageService.updateEvent(updatedEvent);
 
     if (updatedEvent.isActive) {
-      _reminderService.setMessage(updatedEvent.message);
-      _reminderService.setTimeRange(
-        updatedEvent.startTime,
-        updatedEvent.endTime,
-      );
-      _reminderService.setFrequency(
-        Duration(minutes: updatedEvent.frequencyMinutes),
-      );
-      _reminderService.startReminders();
+      final service = ReminderService();
+      await service.initialize();
+      service.setMessage(updatedEvent.message);
+      service.setTimeRange(updatedEvent.startTime, updatedEvent.endTime);
+      service.setFrequency(Duration(minutes: updatedEvent.frequencyMinutes));
+      service.setWorkdayOnly(updatedEvent.workdayOnly);
+      service.startReminders();
+      _reminderServices[updatedEvent.id] = service;
     } else {
-      _reminderService.stopReminders();
+      final service = _reminderServices[updatedEvent.id];
+      if (service != null) {
+        service.stopReminders();
+        service.dispose();
+        _reminderServices.remove(updatedEvent.id);
+      }
+    }
+
+    await _loadEvents();
+  }
+
+  Future<void> _toggleWorkdayOnly(ReminderEvent event) async {
+    final updatedEvent = ReminderEvent(
+      id: event.id,
+      message: event.message,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      frequencyMinutes: event.frequencyMinutes,
+      isActive: event.isActive,
+      workdayOnly: !event.workdayOnly,
+    );
+    await _storageService.updateEvent(updatedEvent);
+
+    if (updatedEvent.isActive) {
+      _reminderServices[updatedEvent.id]!.setWorkdayOnly(
+        updatedEvent.workdayOnly,
+      );
     }
 
     await _loadEvents();
@@ -117,7 +157,7 @@ class _ReminderListPageState extends State<ReminderListPage> {
     if (confirmed ?? false) {
       await _storageService.deleteEvent(event.id);
       if (event.isActive) {
-        _reminderService.stopReminders();
+        _reminderServices[event.id]!.stopReminders();
       }
       await _loadEvents();
     }
@@ -135,26 +175,61 @@ class _ReminderListPageState extends State<ReminderListPage> {
         itemBuilder: (context, index) {
           final event = _events[index];
           return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: ListTile(
-              title: Text(event.message),
-              subtitle: Text(
-                '${event.startTime.format(context)} - ${event.endTime.format(context)}\nFrequency: ${event.frequencyMinutes} minutes',
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () => _editEvent(event),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event.message,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${event.startTime.format(context)} - ${event.endTime.format(context)}\nFrequency: ${event.frequencyMinutes} minutes${event.workdayOnly ? '\nWorkday only' : ''}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
                   ),
-                  Switch(
-                    value: event.isActive,
-                    onChanged: (value) => _toggleEventActive(event),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () => _deleteEvent(event),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('Active', style: TextStyle(fontSize: 12)),
+                          Switch(
+                            value: event.isActive,
+                            onChanged: (value) => _toggleEventActive(event),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 8), // 添加水平间距
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('Workday', style: TextStyle(fontSize: 12)),
+                          Switch(
+                            value: event.workdayOnly,
+                            onChanged: (value) => _toggleWorkdayOnly(event),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _editEvent(event),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () => _deleteEvent(event),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -184,6 +259,7 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
   TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 22, minute: 0);
   int _frequencyMinutes = 60;
+  bool _workdayOnly = false;
 
   @override
   void initState() {
@@ -193,6 +269,7 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
       _startTime = widget.event!.startTime;
       _endTime = widget.event!.endTime;
       _frequencyMinutes = widget.event!.frequencyMinutes;
+      _workdayOnly = widget.event!.workdayOnly;
     }
   }
 
@@ -232,6 +309,7 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
       startTime: _startTime,
       endTime: _endTime,
       frequencyMinutes: _frequencyMinutes,
+      workdayOnly: _workdayOnly,
     );
 
     Navigator.pop(context, event);
@@ -253,14 +331,25 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
               controller: _messageController,
               decoration: InputDecoration(
                 labelText: 'Reminder Message',
-                hintText: 'Enter message (不能超过10个字符)',
-                counterText: '${_messageController.text.length}/10',
+                hintText: 'Enter message (不能超过20个字符)',
+                counterText: '${_messageController.text.length}/20',
                 errorText:
-                    _messageController.text.length > 10
+                    _messageController.text.length > 20
                         ? 'Message too long'
                         : null,
               ),
-              maxLength: 10,
+              maxLength: 20,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Text('Workday Only'),
+                const Spacer(),
+                Switch(
+                  value: _workdayOnly,
+                  onChanged: (value) => setState(() => _workdayOnly = value),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             const Text(

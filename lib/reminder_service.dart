@@ -1,15 +1,13 @@
 import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:just_audio/just_audio.dart';
+// import 'package:just_audio/just_audio.dart';
 import 'package:flutter/material.dart';  // 添加这行导入
 
 class ReminderService {
-  static final ReminderService _instance = ReminderService._internal();
-  factory ReminderService() => _instance;
-  ReminderService._internal();
+  ReminderService();
 
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // final AudioPlayer _audioPlayer = AudioPlayer();
   Timer? _reminderTimer;
 
   // Reminder settings
@@ -17,9 +15,15 @@ class ReminderService {
   TimeOfDay _endTime = const TimeOfDay(hour: 22, minute: 0);
   Duration _frequency = const Duration(hours: 1);
   String _message = 'Time to break!';
+  bool _workdayOnly = false;
 
   void setMessage(String message) {
     _message = message.isNotEmpty ? message : 'Time to break!';
+  }
+
+  void setWorkdayOnly(bool workdayOnly) {
+    _workdayOnly = workdayOnly;
+    _restartTimer();
   }
 
   Future<void> initialize() async {
@@ -56,10 +60,15 @@ class ReminderService {
   }
 
   bool _isWithinActiveHours() {
-    final now = TimeOfDay.now();
-    final currentMinutes = now.hour * 60 + now.minute;
+    final now = DateTime.now();
+    final currentTimeOfDay = TimeOfDay.fromDateTime(now);
+    final currentMinutes = currentTimeOfDay.hour * 60 + currentTimeOfDay.minute;
     final startMinutes = _startTime.hour * 60 + _startTime.minute;
     final endMinutes = _endTime.hour * 60 + _endTime.minute;
+    
+    if (_workdayOnly && (now.weekday == DateTime.saturday || now.weekday == DateTime.sunday)) {
+      return false;
+    }
     
     return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
   }
@@ -124,6 +133,6 @@ class ReminderService {
 
   void dispose() {
     _stopTimer();
-    _audioPlayer.dispose();
+    // _audioPlayer.dispose();
   }
 }

@@ -94,11 +94,11 @@ class _MyHomePageState extends State<MyHomePage> {
               controller: _messageController,
               decoration: InputDecoration(
                 labelText: 'Reminder Message',
-                hintText: 'Enter message (不能超过10个字符)',
-                counterText: '${_messageController.text.length}/10',
-                errorText: _messageController.text.length > 10 ? 'Message too long' : null,
+                hintText: 'Enter message (不能超过20个字符)',
+                counterText: '${_messageController.text.length}/20',
+                errorText: _messageController.text.length > 20 ? 'Message too long' : null,
               ),
-              maxLength: 10,
+              maxLength: 20,
               onChanged: (value) {
                 setState(() {});
                 if (value.length <= 10) {
@@ -127,7 +127,7 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(height: 16),
             DropdownButton<int>(
               value: _frequencyMinutes,
-              items: [1,15, 30, 45, 60, 120]
+              items: [1,5,15, 30, 45, 60, 120]
                   .map((minutes) => DropdownMenuItem(
                         value: minutes,
                         child: Text('Every ${minutes >= 60 ? '${minutes ~/ 60} hour${minutes >= 120 ? 's' : ''}' : '$minutes minutes'}'),

@@ -1,16 +1,19 @@
-# reminder
+# reminder,一只独特的提醒APP
 
-A new Flutter project.
+## 开发背景
+  - 市面上的提醒APP无法实现：办公室久坐岗位，只需要在白天工作时间内，每小时提醒我站起来喝水，下班后或周末不要提醒我！
 
-## Getting Started
 
-This project is a starting point for a Flutter application.
+## 功能
+- [x] 提醒事项列表
+- [x] 提醒事项详情
+- [x] 设置是否仅工作日提醒 
 
-A few resources to get you started if this is your first Flutter project:
+## 效果图
+- 事件提醒效果
+![事件提醒效果](images/事件提醒效果.png)
+- 事件编辑
+![事件编辑](images/事件编辑.png)
+- 设置起始结束时间
+![设置起始结束时间](images/设置起始结束时间.png)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
