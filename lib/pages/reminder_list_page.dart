@@ -45,7 +45,12 @@ class _ReminderListPageState extends State<ReminderListPage> {
         final service = ReminderService();
         await service.initialize();
         service.setMessage(event.message);
-        service.setTimeRange(event.startTime, event.endTime);
+        service.setTimeRangeEnabled(event.timeRangeEnabled);
+        if (event.timeRangeEnabled) {
+          service.setTimeRange(event.startTime, event.endTime);
+        } else {
+          service.setReminderTime(event.reminderTime);
+        }
         service.setFrequency(Duration(minutes: event.frequencyMinutes));
         service.setWorkdayOnly(event.workdayOnly);
         service.startReminders();
@@ -65,7 +70,12 @@ class _ReminderListPageState extends State<ReminderListPage> {
       final service = ReminderService();
       await service.initialize();
       service.setMessage(event.message);
-      service.setTimeRange(event.startTime, event.endTime);
+      service.setTimeRangeEnabled(event.timeRangeEnabled);
+      if (event.timeRangeEnabled) {
+        service.setTimeRange(event.startTime, event.endTime);
+      } else {
+        service.setReminderTime(event.reminderTime);
+      }
       service.setFrequency(Duration(minutes: event.frequencyMinutes));
       service.setWorkdayOnly(event.workdayOnly);
       service.startReminders();
@@ -82,7 +92,12 @@ class _ReminderListPageState extends State<ReminderListPage> {
       final service = ReminderService();
       await service.initialize();
       service.setMessage(updatedEvent.message);
-      service.setTimeRange(updatedEvent.startTime, updatedEvent.endTime);
+      service.setTimeRangeEnabled(updatedEvent.timeRangeEnabled);
+      if (updatedEvent.timeRangeEnabled) {
+        service.setTimeRange(updatedEvent.startTime, updatedEvent.endTime);
+      } else {
+        service.setReminderTime(updatedEvent.reminderTime);
+      }
       service.setFrequency(Duration(minutes: updatedEvent.frequencyMinutes));
       service.setWorkdayOnly(updatedEvent.workdayOnly);
       service.startReminders();
@@ -105,7 +120,9 @@ class _ReminderListPageState extends State<ReminderListPage> {
       message: event.message,
       startTime: event.startTime,
       endTime: event.endTime,
+      reminderTime: event.reminderTime,
       frequencyMinutes: event.frequencyMinutes,
+      timeRangeEnabled: event.timeRangeEnabled,
       isActive: event.isActive,
       workdayOnly: !event.workdayOnly,
     );
@@ -262,8 +279,10 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
   final TextEditingController _messageController = TextEditingController();
   TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 22, minute: 0);
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 9, minute: 0);
   int _frequencyMinutes = 60;
   bool _workdayOnly = false;
+  bool _timeRangeEnabled = true;
 
   @override
   void initState() {
@@ -274,30 +293,21 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
       _endTime = widget.event!.endTime;
       _frequencyMinutes = widget.event!.frequencyMinutes;
       _workdayOnly = widget.event!.workdayOnly;
+      _timeRangeEnabled = widget.event!.timeRangeEnabled;
+      _reminderTime = widget.event!.reminderTime;
     }
   }
 
-  Future<void> _selectTime(bool isStartTime) async {
+  Future<void> _selectReminderTime() async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: isStartTime ? _startTime : _endTime,
+      initialTime: _reminderTime ?? TimeOfDay.now(),
     );
     if (picked != null) {
       setState(() {
-        if (isStartTime) {
-          _startTime = picked;
-        } else {
-          _endTime = picked;
-        }
+        _reminderTime = picked;
       });
     }
-  }
-
-  void _updateFrequency(int minutes) {
-    setState(() {
-      debugPrint('updateFrequency after selector: $minutes minutes');
-      _frequencyMinutes = minutes;
-    });
   }
 
   void _saveEvent() {
@@ -308,6 +318,13 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
       return;
     }
 
+    if (_timeRangeEnabled && (_startTime == null || _endTime == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please set both start and end times')),
+      );
+      return;
+    }
+
     final event = ReminderEvent(
       id: widget.event?.id ?? const Uuid().v4(),
       message: _messageController.text,
@@ -315,9 +332,52 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
       endTime: _endTime,
       frequencyMinutes: _frequencyMinutes,
       workdayOnly: _workdayOnly,
+      timeRangeEnabled: _timeRangeEnabled,
+      reminderTime: _reminderTime,
+      isActive: widget.event?.isActive ?? true,
     );
 
     Navigator.pop(context, event);
+  }
+
+  Future<void> _selectTime(bool isStartTime) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: isStartTime ? _startTime : _endTime,
+    );
+    if (picked != null) {
+      if (!isStartTime &&
+          _timeOfDayToMinutes(picked) <= _timeOfDayToMinutes(_startTime)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('End time must be after start time')),
+        );
+        return;
+      }
+      setState(() {
+        if (isStartTime) {
+          _startTime = picked;
+          if (_timeOfDayToMinutes(_endTime) <= _timeOfDayToMinutes(picked)) {
+            _endTime = TimeOfDay(
+              hour: (picked.hour + 1) % 24,
+              minute: picked.minute,
+            );
+          }
+        } else {
+          _endTime = picked;
+        }
+      });
+    }
+  }
+
+  int _timeOfDayToMinutes(TimeOfDay time) {
+    return time.hour * 60 + time.minute;
+  }
+
+  void _updateFrequency(int minutes) {
+    setState(() {
+      debugPrint('updateFrequency after selector: $minutes minutes');
+      _frequencyMinutes = minutes;
+    });
   }
 
   @override
@@ -336,7 +396,7 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
               controller: _messageController,
               decoration: InputDecoration(
                 labelText: 'Reminder Message',
-                hintText: 'Enter message (不能超过20个字符)',
+                hintText: 'Enter message (no more than 20 characters)',
                 counterText: '${_messageController.text.length}/20',
                 errorText:
                     _messageController.text.length > 20
@@ -357,25 +417,46 @@ class _ReminderEditPageState extends State<ReminderEditPage> {
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Active Hours',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Column(
               children: [
-                TextButton.icon(
-                  onPressed: () => _selectTime(true),
-                  icon: const Icon(Icons.access_time),
-                  label: Text('Start: ${_startTime.format(context)}'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Enable Time Range'),
+                    Switch(
+                      value: _timeRangeEnabled,
+                      onChanged: (value) {
+                        setState(() {
+                          _timeRangeEnabled = value;
+                        });
+                      },
+                    ),
+                  ],
                 ),
-                TextButton.icon(
-                  onPressed: () => _selectTime(false),
-                  icon: const Icon(Icons.access_time),
-                  label: Text('End: ${_endTime.format(context)}'),
-                ),
+
+                if (_timeRangeEnabled) ...[
+                  ListTile(
+                    title: const Text('Start Time'),
+                    trailing: Text(_startTime.format(context)),
+                    onTap: () => _selectTime(true),
+                  ),
+                  ListTile(
+                    title: const Text('End Time'),
+                    trailing: Text(_endTime.format(context)),
+                    onTap: () => _selectTime(false),
+                  ),
+                ],
               ],
+            ),
+            const SizedBox(height: 32),
+            ListTile(
+              contentPadding: EdgeInsets.only(left: 0.0,right: 24.0),
+              title: const Text(
+                'Reminder Time',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              trailing: Text(_reminderTime.format(context)),
+              onTap: _selectReminderTime,
             ),
             const SizedBox(height: 32),
             const Text(

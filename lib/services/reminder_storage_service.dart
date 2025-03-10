@@ -4,9 +4,16 @@ import '../models/reminder_event.dart';
 
 class ReminderStorageService {
   static const String _storageKey = 'reminder_events';
-  static final ReminderStorageService _instance = ReminderStorageService._internal();
+  static final ReminderStorageService _instance =
+      ReminderStorageService._internal();
   factory ReminderStorageService() => _instance;
   ReminderStorageService._internal();
+
+
+  Future<void> clearEvents() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey);
+  }
 
   Future<List<ReminderEvent>> loadEvents() async {
     final prefs = await SharedPreferences.getInstance();

@@ -88,15 +88,21 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Active Hours', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'Active Hours',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _messageController,
               decoration: InputDecoration(
                 labelText: 'Reminder Message',
-                hintText: 'Enter message (不能超过20个字符)',
+                hintText: 'Enter message (no more than 20 characters)',
                 counterText: '${_messageController.text.length}/20',
-                errorText: _messageController.text.length > 20 ? 'Message too long' : null,
+                errorText:
+                    _messageController.text.length > 20
+                        ? 'Message too long'
+                        : null,
               ),
               maxLength: 20,
               onChanged: (value) {
@@ -123,17 +129,26 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ),
             const SizedBox(height: 32),
-            const Text('Reminder Frequency', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'Reminder Frequency',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             DropdownButton<int>(
               value: _frequencyMinutes,
-              items: [1,5,15, 30, 45, 60, 120]
-                  .map((minutes) => DropdownMenuItem(
-                        value: minutes,
-                        child: Text('Every ${minutes >= 60 ? '${minutes ~/ 60} hour${minutes >= 120 ? 's' : ''}' : '$minutes minutes'}'),
-                      ))
-                  .toList(),
-              onChanged: (value) => value != null ? _updateFrequency(value) : null,
+              items:
+                  [1, 5, 15, 30, 45, 60, 120]
+                      .map(
+                        (minutes) => DropdownMenuItem(
+                          value: minutes,
+                          child: Text(
+                            'Every ${minutes >= 60 ? '${minutes ~/ 60} hour${minutes >= 120 ? 's' : ''}' : '$minutes minutes'}',
+                          ),
+                        ),
+                      )
+                      .toList(),
+              onChanged:
+                  (value) => value != null ? _updateFrequency(value) : null,
             ),
           ],
         ),
