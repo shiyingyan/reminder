@@ -35,5 +35,6 @@
 ## 编译构建
 ```
 # 以下是macos构建指令。其它平台参照文档编译：https://docs.flutter.dev/deployment
+cd 项目根目录
 flutter build macos
 ```
